@@ -20,7 +20,7 @@ jobs:
       - name: Download Image Builder
         run: |
           RELEASE_VER="25.12.6"
-          wget https://downloads.openwrt.org/releases/${RELEASE_VER}/targets/mediatek/filogic/openwrt-imagebuilder-${RELEASE_VER}-mediatek-filogic.Linux-x86_64.tar.xz
+          wget https://downloads.openwrt.org/releases/${RELEASE_VER}/targets/mediatek/filogic/openwrt-imagebuilder-${RELEASE_VER}-mediatek-filogic.Linux-x86_64.tar.zst
           tar -xvf openwrt-imagebuilder-*.tar.*
           rm openwrt-imagebuilder-*.tar.*
           mv openwrt-imagebuilder-* imagebuilder
