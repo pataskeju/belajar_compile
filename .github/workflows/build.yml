@@ -1,4 +1,4 @@
-name: Build Totolink X6000R Firmware (Stable)
+name: Build Totolink X6000R Firmware (Auto Wi-Fi)
 
 on:
   workflow_dispatch:
@@ -34,13 +34,26 @@ jobs:
           fi
           cp totolink-x6000r.dts "$DTS_PATH"
 
+      - name: Enable Wi-Fi by Default
+        run: |
+          mkdir -p imagebuilder/files/etc/uci-defaults
+          cat << 'EOF' > imagebuilder/files/etc/uci-defaults/99-enable-wifi
+          #!/bin/sh
+          uci set wireless.radio0.disabled='0'
+          uci set wireless.radio1.disabled='0'
+          uci commit wireless
+          wifi reload
+          exit 0
+          EOF
+          chmod +x imagebuilder/files/etc/uci-defaults/99-enable-wifi
+
       - name: Build Image
         run: |
           cd imagebuilder
-          make image PROFILE="totolink_x6000r" PACKAGES="luci"
+          make image PROFILE="totolink_x6000r" PACKAGES="luci" FILES="files"
 
       - name: Upload Firmware Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: totolink-x6000r-firmware-25.12.6
+          name: totolink-x6000r-firmware-autowifi
           path: imagebuilder/bin/targets/mediatek/filogic/openwrt-*-totolink_x6000r-squashfs-sysupgrade.bin
