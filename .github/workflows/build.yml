@@ -1,0 +1,38 @@
+name: Build Totolink X6000R Firmware
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y gawk gettext python3 zstd
+
+      - name: Download Image Builder
+        run: |
+          wget https://downloads.openwrt.org/snapshots/targets/mediatek/filogic/openwrt-imagebuilder-mediatek-filogic.Linux-x86_64.tar.zst
+          tar -xvf openwrt-imagebuilder-*.tar.zst
+          mv openwrt-imagebuilder-* imagebuilder
+
+      - name: Apply Custom DTS
+        run: |
+          DTS_PATH=$(find imagebuilder -name "mt7981b-totolink-x6000r.dts" | head -n 1)
+          cp totolink-x6000r.dts "$DTS_PATH"
+
+      - name: Build Image
+        run: |
+          cd imagebuilder
+          make image PROFILE="totolink_x6000r" PACKAGES="luci kmod-led-gpio"
+
+      - name: Upload Firmware Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: totolink-x6000r-firmware
+          path: imagebuilder/bin/targets/mediatek/filogic/openwrt-*-totolink_x6000r-squashfs-sysupgrade.bin
