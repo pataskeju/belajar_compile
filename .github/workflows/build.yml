@@ -1,4 +1,4 @@
-name: Build Totolink X6000R Firmware
+name: Build Totolink X6000R Firmware (Stable)
 
 on:
   workflow_dispatch:
@@ -19,9 +19,10 @@ jobs:
 
       - name: Download Image Builder
         run: |
-          wget https://downloads.openwrt.org/snapshots/targets/mediatek/filogic/openwrt-imagebuilder-mediatek-filogic.Linux-x86_64.tar.zst
-          tar -xvf openwrt-imagebuilder-*.tar.zst
-          rm openwrt-imagebuilder-*.tar.zst
+          RELEASE_VER="25.12.6"
+          wget https://downloads.openwrt.org/releases/${RELEASE_VER}/targets/mediatek/filogic/openwrt-imagebuilder-${RELEASE_VER}-mediatek-filogic.Linux-x86_64.tar.xz
+          tar -xvf openwrt-imagebuilder-*.tar.*
+          rm openwrt-imagebuilder-*.tar.*
           mv openwrt-imagebuilder-* imagebuilder
 
       - name: Apply Custom DTS
@@ -41,5 +42,5 @@ jobs:
       - name: Upload Firmware Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: totolink-x6000r-firmware
+          name: totolink-x6000r-firmware-25.12.6
           path: imagebuilder/bin/targets/mediatek/filogic/openwrt-*-totolink_x6000r-squashfs-sysupgrade.bin
