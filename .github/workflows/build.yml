@@ -1,4 +1,4 @@
-name: Build Totolink X6000R Firmware (Auto Wi-Fi)
+name: Build Totolink X6000R Firmware (Fixed DTB & Auto Wi-Fi)
 
 on:
   workflow_dispatch:
@@ -15,7 +15,7 @@ jobs:
           sudo apt update
           sudo apt install -y build-essential libncurses5-dev libncursesw5-dev \
             zlib1g-dev gawk git gettext libssl-dev xsltproc rsync \
-            python3 python3-pip zstd file wget
+            python3 python3-pip zstd file wget device-tree-compiler gcc-aarch64-linux-gnu
 
       - name: Download Image Builder
         run: |
@@ -25,35 +25,41 @@ jobs:
           rm openwrt-imagebuilder-*.tar.*
           mv openwrt-imagebuilder-* imagebuilder
 
-      - name: Apply Custom DTS
+      - name: Inject Custom DTS directly into Target
         run: |
-          DTS_PATH=$(find imagebuilder -name "mt7981b-totolink-x6000r.dts" | head -n 1)
-          if [ -z "$DTS_PATH" ]; then
-            echo "Error: File DTS tujuan tidak ditemukan!"
-            exit 1
-          fi
-          cp totolink-x6000r.dts "$DTS_PATH"
+          find imagebuilder -iname "*totolink*x6000r*.dts" -exec cp totolink-x6000r.dts {} \;
 
-      - name: Enable Wi-Fi by Default
+      - name: Auto-Enable Wi-Fi via Init Service
         run: |
-          mkdir -p imagebuilder/files/etc/uci-defaults
-          cat << 'EOF' > imagebuilder/files/etc/uci-defaults/99-enable-wifi
-          #!/bin/sh
-          uci set wireless.radio0.disabled='0'
-          uci set wireless.radio1.disabled='0'
-          uci commit wireless
-          wifi reload
-          exit 0
+          mkdir -p imagebuilder/files/etc/init.d
+          cat << 'EOF' > imagebuilder/files/etc/init.d/autowifi
+          #!/bin/sh /etc/rc.common
+          START=99
+
+          boot() {
+              if [ -f /etc/config/wireless ]; then
+                  uci set wireless.radio0.disabled='0' 2>/dev/null || true
+                  uci set wireless.radio1.disabled='0' 2>/dev/null || true
+                  sed -i "s/option disabled '1'/option disabled '0'/g" /etc/config/wireless
+                  sed -i 's/option disabled 1/option disabled 0/g' /etc/config/wireless
+                  uci commit wireless
+                  wifi reload
+              fi
+          }
           EOF
-          chmod +x imagebuilder/files/etc/uci-defaults/99-enable-wifi
+          chmod +x imagebuilder/files/etc/init.d/autowifi
+
+          mkdir -p imagebuilder/files/etc/rc.d
+          ln -s ../init.d/autowifi imagebuilder/files/etc/rc.d/S99autowifi
 
       - name: Build Image
         run: |
           cd imagebuilder
-          make image PROFILE="totolink_x6000r" PACKAGES="luci" FILES="files"
+          make image PROFILE="totolink_x6000r" PACKAGES="luci kmod-leds-gpio" FILES="files"
 
       - name: Upload Firmware Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: totolink-x6000r-firmware-autowifi
+          name: totolink-x6000r-firmware-final
           path: imagebuilder/bin/targets/mediatek/filogic/openwrt-*-totolink_x6000r-squashfs-sysupgrade.bin
+          
